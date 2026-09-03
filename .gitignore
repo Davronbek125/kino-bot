@@ -1,0 +1,25 @@
+# Muhit fayllari (Bot token va maxfiy ma'lumotlar)
+.env
+
+# Ma'lumotlar bazasi (Lokal SQLite fayllari)
+database/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Python kesh va muhit fayllari
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDE va muharrir fayllari
+.vscode/
+.idea/
+*.swp
+
+# Tizim fayllari
+.DS_Store
+Thumbs.db
