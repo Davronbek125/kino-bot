@@ -9,7 +9,7 @@ from aiogram.exceptions import TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-from config import ADMIN_IDS
+from config import ADMIN_IDS, STORAGE_CHANNEL_ID
 from database import db
 from keyboards.reply import (
     get_admin_menu,
@@ -78,6 +78,31 @@ class BroadcastState(StatesGroup):
 def is_admin(user_id: int) -> bool:
     """Foydalanuvchi admin ekanligini tekshirish"""
     return user_id in ADMIN_IDS
+
+
+async def backup_video_to_channel(bot: Bot, message: Message) -> str:
+    """Videoni saqlash kanaliga yuborib, doimiy file_id qaytaradi"""
+    if STORAGE_CHANNEL_ID:
+        try:
+            if message.video:
+                sent = await bot.send_video(
+                    chat_id=STORAGE_CHANNEL_ID,
+                    video=message.video.file_id,
+                    caption="🎬 Arxiv video"
+                )
+                return sent.video.file_id
+            elif message.document:
+                sent = await bot.send_document(
+                    chat_id=STORAGE_CHANNEL_ID,
+                    document=message.document.file_id,
+                    caption="🎬 Arxiv hujjat"
+                )
+                return sent.document.file_id
+        except Exception as e:
+            logging.error(f"Kanalga yuborishda xatolik: {e}")
+
+    # Agar kanal ulanmagan yoki xatolik yuz bersa, oddiy file_id ni qaytaradi
+    return message.video.file_id if message.video else message.document.file_id
 
 
 # ================= ADMIN PANEL KIRISH VA BEKOR QILISH =================
@@ -155,12 +180,13 @@ async def start_add_movie(message: Message, state: FSMContext):
 
 
 @admin_router.message(AddMovieState.waiting_for_video, F.video | (F.document & F.document.mime_type.startswith("video/")))
-async def process_movie_video(message: Message, state: FSMContext):
-    file_id = message.video.file_id if message.video else message.document.file_id
+async def process_movie_video(message: Message, state: FSMContext, bot: Bot):
+    # Kanalga nusxalab, doimiy file_id olamiz
+    file_id = await backup_video_to_channel(bot, message)
     await state.update_data(file_id=file_id)
     await state.set_state(AddMovieState.waiting_for_code)
     await message.answer(
-        "✅ Video qabul qilindi!\n\n"
+        "✅ Video arxivlandi va qabul qilindi!\n\n"
         "Endi kino uchun <b>noyob kod</b> kiriting (Masalan: <code>101</code> yoki <code>avengers</code>):",
         parse_mode="HTML"
     )
@@ -327,8 +353,9 @@ async def process_serial_caption(message: Message, state: FSMContext):
 
 
 @admin_router.message(AddSerialState.waiting_for_episodes, F.video | (F.document & F.document.mime_type.startswith("video/")))
-async def process_serial_video(message: Message, state: FSMContext):
-    file_id = message.video.file_id if message.video else message.document.file_id
+async def process_serial_video(message: Message, state: FSMContext, bot: Bot):
+    # Kanalga nusxalab, doimiy file_id olamiz
+    file_id = await backup_video_to_channel(bot, message)
     data = await state.get_data()
     code = data["code"]
 
@@ -336,7 +363,7 @@ async def process_serial_video(message: Message, state: FSMContext):
         new_ep = await db.add_next_episode(serial_code=code, file_id=file_id)
 
     if new_ep:
-        await message.answer(f"✅ <b>{new_ep}-qism</b> qabul qilindi!")
+        await message.answer(f"✅ <b>{new_ep}-qism</b> qabul qilindi va kanalga saqlandi!")
     else:
         await message.answer("⚠️ Qismni saqlashda xatolik yuz berdi.")
 
@@ -406,8 +433,9 @@ async def process_append_code(message: Message, state: FSMContext):
 
 
 @admin_router.message(AppendEpisodeState.waiting_for_episodes, F.video | (F.document & F.document.mime_type.startswith("video/")))
-async def process_append_video(message: Message, state: FSMContext):
-    file_id = message.video.file_id if message.video else message.document.file_id
+async def process_append_video(message: Message, state: FSMContext, bot: Bot):
+    # Kanalga nusxalab, doimiy file_id olamiz
+    file_id = await backup_video_to_channel(bot, message)
     data = await state.get_data()
     code = data["code"]
 
@@ -415,7 +443,7 @@ async def process_append_video(message: Message, state: FSMContext):
         new_ep = await db.add_next_episode(serial_code=code, file_id=file_id)
 
     if new_ep:
-        await message.answer(f"✅ <b>{new_ep}-qism</b> qabul qilindi!")
+        await message.answer(f"✅ <b>{new_ep}-qism</b> qabul qilindi va kanalga saqlandi!")
     else:
         await message.answer("⚠️ Qismni saqlashda xatolik yuz berdi.")
 
