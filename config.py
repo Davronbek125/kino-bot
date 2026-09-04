@@ -20,12 +20,11 @@ if raw_admins:
 # Render yoki boshqa serverlar tomonidan beriladigan port
 PORT = int(os.getenv("PORT", "0"))
 
-# Ma'lumotlar bazasi fayl manzili (Render Persistent Disk qo'llab-quvvatlanadi)
-db_path_env = os.getenv("DB_PATH", "").strip().strip('"').strip("'")
-if db_path_env:
-    DB_PATH = Path(db_path_env)
-else:
-    DB_PATH = BASE_DIR / "database" / "bot.db"
+# Arxiv/Saqlash kanali ID si
+STORAGE_CHANNEL_ID = int(os.getenv("STORAGE_CHANNEL_ID", "-1003770492872"))
+
+# Ma'lumotlar bazasi fayl manzili
+DB_PATH = BASE_DIR / "database" / "bot.db"
 
 # Baza papkasi mavjudligini ta'minlash
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
